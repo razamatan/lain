@@ -34,11 +34,12 @@ local function factory(args)
     local followtag     = args.followtag or false
     local settings      = args.settings or function(_, _) end
 
-    local mpdh = string.format("telnet://%s:%s", host, port)
+    local mpdh = string.format("%s %s", host, port)
     local echo = string.format("printf \"%sstatus\\ncurrentsong\\nclose\\n\"", password)
-    local cmd  = string.format("%s | curl --connect-timeout 1 -fsm 3 %s", echo, mpdh)
+    --local cmd  = string.format("%s | curl --connect-timeout 1 -fsm 3 %s", echo, mpdh)
+    local cmd  = string.format("%s | nc -w1 %s", echo, mpdh)
 
-    local mpd_notification_preset = { title = "Now playing", timeout = 6 }
+    mpd.notification_preset = { title = "Now playing", timeout = 6 }
 
     helpers.set_map("current mpd track", nil)
 
@@ -89,7 +90,7 @@ local function factory(args)
                 end
             end
 
-            mpd_notification_preset.text = string.format("%s (%s) - %s\n%s", mpd.now.artist,
+            mpd.notification_preset.text = string.format("%s (%s) - %s\n%s", mpd.now.artist,
                                            mpd.now.album, mpd.now.date, mpd.now.title)
             settings(mpd.widget, mpd.now)
 
@@ -97,10 +98,10 @@ local function factory(args)
                 if notify == "on" and mpd.now.title ~= helpers.get_map("current mpd track") then
                     helpers.set_map("current mpd track", mpd.now.title)
 
-                    if followtag then mpd_notification_preset.screen = focused() end
+                    if followtag then mpd.notification_preset.screen = focused() end
 
                     local common =  {
-                        preset      = mpd_notification_preset,
+                        preset      = mpd.notification_preset,
                         icon        = default_art,
                         icon_size   = cover_size,
                         replaces_id = mpd.id
