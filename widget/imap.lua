@@ -29,14 +29,14 @@ local function factory(args)
     local is_plain   = args.is_plain or false
     local followtag  = args.followtag or false
     local notify     = args.notify or "on"
-    local settings   = args.settings or function() end
+    local settings   = args.settings or function(_, _) end
 
     local head_command = "curl --connect-timeout 3 -fsm 3"
     local request = "-X 'STATUS INBOX (MESSAGES RECENT UNSEEN)'"
 
     if not server or not mail or not password then return end
 
-    mail_notification_preset = {
+    local mail_notification_preset = {
         icon     = helpers.icons_dir .. "mail.png",
         position = "top_left"
     }
@@ -65,14 +65,13 @@ local function factory(args)
                      head_command, server, port, mail, password, request)
 
         helpers.async(curl, function(f)
-            imap_now = { ["MESSAGES"] = 0, ["RECENT"] = 0, ["UNSEEN"] = 0 }
+            imap.now = { ["MESSAGES"] = 0, ["RECENT"] = 0, ["UNSEEN"] = 0 }
 
-            for s,d in f:gmatch("(%w+)%s+(%d+)") do imap_now[s] = tonumber(d) end
-            mailcount = imap_now["UNSEEN"] -- backwards compatibility
-            widget = imap.widget
+            for s,d in f:gmatch("(%w+)%s+(%d+)") do imap.now[s] = tonumber(d) end
 
-            settings()
+            settings(imap.widget, imap.now)
 
+            local mailcount = imap.now["UNSEEN"]
             if notify == "on" and mailcount and mailcount >= 1 and mailcount > helpers.get_map(mail) then
                 if followtag then mail_notification_preset.screen = awful.screen.focused() end
                 naughty.notify {
@@ -81,7 +80,7 @@ local function factory(args)
                 }
             end
 
-            helpers.set_map(mail, imap_now["UNSEEN"])
+            helpers.set_map(mail, imap.now["UNSEEN"])
         end)
 
     end

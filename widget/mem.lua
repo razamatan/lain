@@ -18,29 +18,28 @@ local function factory(args)
 
     local mem      = { widget = args.widget or wibox.widget.textbox() }
     local timeout  = args.timeout or 2
-    local settings = args.settings or function() end
+    local settings = args.settings or function(_, _) end
 
     function mem.update()
-        mem_now = {}
+        mem.now = {}
         for line in lines("/proc/meminfo") do
             for k, v in gmatch(line, "([%a]+):[%s]+([%d]+).+") do
-                if     k == "MemTotal"     then mem_now.total = floor(v / 1024 + 0.5)
-                elseif k == "MemFree"      then mem_now.free  = floor(v / 1024 + 0.5)
-                elseif k == "Buffers"      then mem_now.buf   = floor(v / 1024 + 0.5)
-                elseif k == "Cached"       then mem_now.cache = floor(v / 1024 + 0.5)
-                elseif k == "SwapTotal"    then mem_now.swap  = floor(v / 1024 + 0.5)
-                elseif k == "SwapFree"     then mem_now.swapf = floor(v / 1024 + 0.5)
-                elseif k == "SReclaimable" then mem_now.srec  = floor(v / 1024 + 0.5)
+                if     k == "MemTotal"     then mem.now.total = floor(v / 1024 + 0.5)
+                elseif k == "MemFree"      then mem.now.free  = floor(v / 1024 + 0.5)
+                elseif k == "Buffers"      then mem.now.buf   = floor(v / 1024 + 0.5)
+                elseif k == "Cached"       then mem.now.cache = floor(v / 1024 + 0.5)
+                elseif k == "SwapTotal"    then mem.now.swap  = floor(v / 1024 + 0.5)
+                elseif k == "SwapFree"     then mem.now.swapf = floor(v / 1024 + 0.5)
+                elseif k == "SReclaimable" then mem.now.srec  = floor(v / 1024 + 0.5)
                 end
             end
         end
 
-        mem_now.used = mem_now.total - mem_now.free - mem_now.buf - mem_now.cache - mem_now.srec
-        mem_now.swapused = mem_now.swap - mem_now.swapf
-        mem_now.perc = math.floor(mem_now.used / mem_now.total * 100)
+        mem.now.used = mem.now.total - mem.now.free - mem.now.buf - mem.now.cache - mem.now.srec
+        mem.now.swapused = mem.now.swap - mem.now.swapf
+        mem.now.perc = math.floor(mem.now.used / mem.now.total * 100)
 
-        widget = mem.widget
-        settings()
+        settings(mem.widget, mem.now)
     end
 
     helpers.newtimer("mem", timeout, mem.update)

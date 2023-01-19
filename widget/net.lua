@@ -25,7 +25,7 @@ local function factory(args)
     local eth_state  = args.eth_state or "off"
     local screen     = args.screen or 1
     local format     = args.format or "%.1f"
-    local settings   = args.settings or function() end
+    local settings   = args.settings or function(_, _) end
 
     -- Compatibility with old API where iface was a string corresponding to 1 interface
     net.iface = (args.iface and (type(args.iface) == "string" and {args.iface}) or
@@ -42,7 +42,7 @@ local function factory(args)
 
     function net.update()
         -- These are the totals over all specified interfaces
-        net_now = {
+        net.now = {
             devices  = {},
             -- Bytes since last iteration
             sent     = 0,
@@ -61,8 +61,8 @@ local function factory(args)
             dev_now.sent     = (now_t - dev_before.last_t) / timeout / units
             dev_now.received = (now_r - dev_before.last_r) / timeout / units
 
-            net_now.sent     = net_now.sent + dev_now.sent
-            net_now.received = net_now.received + dev_now.received
+            net.now.sent     = net.now.sent + dev_now.sent
+            net.now.received = net.now.received + dev_now.received
 
             dev_now.sent     = string.format(format, dev_now.sent)
             dev_now.received = string.format(format, dev_now.received)
@@ -100,18 +100,17 @@ local function factory(args)
                 helpers.set_map(dev, true)
             end
 
-            net_now.carrier = dev_now.carrier
-            net_now.state = dev_now.state
-            net_now.devices[dev] = dev_now
-            -- net_now.sent and net_now.received will be
+            net.now.carrier = dev_now.carrier
+            net.now.state = dev_now.state
+            net.now.devices[dev] = dev_now
+            -- net.now.sent and net.now.received will be
             -- the totals across all specified devices
         end
 
-        net_now.sent = string.format(format, net_now.sent)
-        net_now.received = string.format(format, net_now.received)
+        net.now.sent_string = string.format(format, net.now.sent)
+        net.now.received_string = string.format(format, net.now.received)
 
-        widget = net.widget
-        settings()
+        settings(net.widget, net.now)
     end
 
     helpers.newtimer("network", timeout, net.update)

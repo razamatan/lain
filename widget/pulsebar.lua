@@ -35,7 +35,7 @@ local function factory(args)
     args             = args or {}
 
     local timeout    = args.timeout or 5
-    local settings   = args.settings or function() end
+    local settings   = args.settings or function(_, _) end
     local width      = args.width or 63
     local height     = args.height or 1
     local margins    = args.margins or 1
@@ -51,7 +51,7 @@ local function factory(args)
     pulsebar.followtag           = args.followtag or false
     pulsebar.notification_preset = args.notification_preset
     pulsebar.devicetype          = args.devicetype or "sink"
-    pulsebar.cmd                 = args.cmd or "pacmd list-" .. pulsebar.devicetype .. "s | sed -n -e '/*/,$!d' -e '/index/p' -e '/base volume/d' -e '/volume:/p' -e '/muted:/p' -e '/device\\.string/p'"
+    pulsebar.cmd                 = args.cmd or string.format("pacmd list-%ss | sed -n -e '/*/,$!d' -e '/index/p' -e '/base volume/d' -e '/volume:/p' -e '/muted:/p' -e '/device\\.string/p'", pulsebar.devicetype)
 
     if not pulsebar.notification_preset then
         pulsebar.notification_preset = {
@@ -76,26 +76,26 @@ local function factory(args)
     function pulsebar.update(callback)
         helpers.async({ awful.util.shell, "-c", type(pulsebar.cmd) == "string" and pulsebar.cmd or pulsebar.cmd() },
         function(s)
-            volume_now = {
+            pulsebar.now = {
                 index  = string.match(s, "index: (%S+)") or "N/A",
                 device = string.match(s, "device.string = \"(%S+)\"") or "N/A",
                 muted  = string.match(s, "muted: (%S+)") or "N/A"
             }
 
-            pulsebar.device = volume_now.index
+            pulsebar.device = pulsebar.now.index
 
             local ch = 1
-            volume_now.channel = {}
+            pulsebar.now.channel = {}
             for v in string.gmatch(s, ":.-(%d+)%%") do
-              volume_now.channel[ch] = v
+              pulsebar.now.channel[ch] = v
               ch = ch + 1
             end
 
-            volume_now.left  = volume_now.channel[1] or "N/A"
-            volume_now.right = volume_now.channel[2] or "N/A"
+            pulsebar.now.left  = pulsebar.now.channel[1] or "N/A"
+            pulsebar.now.right = pulsebar.now.channel[2] or "N/A"
 
-            local volu = volume_now.left
-            local mute = volume_now.muted
+            local volu = pulsebar.now.left
+            local mute = pulsebar.now.muted
 
             if volu:match("N/A") or mute:match("N/A") then return end
 
@@ -114,7 +114,7 @@ local function factory(args)
                     pulsebar.bar.background_color = pulsebar.colors.background
                 end
 
-                settings()
+                settings(pulsebar.bar, pulsebar.now)
 
                 if type(callback) == "function" then callback() end
             end

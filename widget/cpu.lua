@@ -19,7 +19,7 @@ local function factory(args)
 
     local cpu      = { core = {}, widget = args.widget or wibox.widget.textbox() }
     local timeout  = args.timeout or 2
-    local settings = args.settings or function() end
+    local settings = args.settings or function(_, _) end
 
     function cpu.update()
         -- Read the amount of time the CPUs have spent performing
@@ -60,11 +60,9 @@ local function factory(args)
             end
         end
 
-        cpu_now = cpu.core
-        cpu_now.usage = cpu_now[0].usage
-        widget = cpu.widget
-
-        settings()
+        cpu.now = cpu.core
+        cpu.now.usage = cpu.now[0].usage
+        settings(cpu.widget, cpu.now)
     end
 
     helpers.newtimer("cpu", timeout, cpu.update)
