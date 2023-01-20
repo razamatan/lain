@@ -32,19 +32,19 @@ local function factory(args)
     local default_art   = args.default_art
     local notify        = args.notify or "on"
     local followtag     = args.followtag or false
-    local settings      = args.settings or function() end
+    local settings      = args.settings or function(_, _) end
 
     local mpdh = string.format("telnet://%s:%s", host, port)
     local echo = string.format("printf \"%sstatus\\ncurrentsong\\nclose\\n\"", password)
     local cmd  = string.format("%s | curl --connect-timeout 1 -fsm 3 %s", echo, mpdh)
 
-    mpd_notification_preset = { title = "Now playing", timeout = 6 }
+    local mpd_notification_preset = { title = "Now playing", timeout = 6 }
 
     helpers.set_map("current mpd track", nil)
 
     function mpd.update()
         helpers.async({ shell, "-c", cmd }, function(f)
-            mpd_now = {
+            mpd.now = {
                 random_mode  = false,
                 single_mode  = false,
                 repeat_mode  = false,
@@ -67,36 +67,35 @@ local function factory(args)
 
             for line in string.gmatch(f, "[^\n]+") do
                 for k, v in string.gmatch(line, "([%w]+):[%s](.*)$") do
-                    if     k == "state"          then mpd_now.state        = v
-                    elseif k == "file"           then mpd_now.file         = v
-                    elseif k == "Name"           then mpd_now.name         = escape_f(v)
-                    elseif k == "Artist"         then mpd_now.artist       = escape_f(v)
-                    elseif k == "Title"          then mpd_now.title        = escape_f(v)
-                    elseif k == "Album"          then mpd_now.album        = escape_f(v)
-                    elseif k == "Genre"          then mpd_now.genre        = escape_f(v)
-                    elseif k == "Track"          then mpd_now.track        = escape_f(v)
-                    elseif k == "Date"           then mpd_now.date         = escape_f(v)
-                    elseif k == "Time"           then mpd_now.time         = v
-                    elseif k == "elapsed"        then mpd_now.elapsed      = string.match(v, "%d+")
-                    elseif k == "song"           then mpd_now.pls_pos      = v
-                    elseif k == "playlistlength" then mpd_now.pls_len      = v
-                    elseif k == "repeat"         then mpd_now.repeat_mode  = v ~= "0"
-                    elseif k == "single"         then mpd_now.single_mode  = v ~= "0"
-                    elseif k == "random"         then mpd_now.random_mode  = v ~= "0"
-                    elseif k == "consume"        then mpd_now.consume_mode = v ~= "0"
-                    elseif k == "volume"         then mpd_now.volume       = v
+                    if     k == "state"          then mpd.now.state        = v
+                    elseif k == "file"           then mpd.now.file         = v
+                    elseif k == "Name"           then mpd.now.name         = escape_f(v)
+                    elseif k == "Artist"         then mpd.now.artist       = escape_f(v)
+                    elseif k == "Title"          then mpd.now.title        = escape_f(v)
+                    elseif k == "Album"          then mpd.now.album        = escape_f(v)
+                    elseif k == "Genre"          then mpd.now.genre        = escape_f(v)
+                    elseif k == "Track"          then mpd.now.track        = escape_f(v)
+                    elseif k == "Date"           then mpd.now.date         = escape_f(v)
+                    elseif k == "Time"           then mpd.now.time         = v
+                    elseif k == "elapsed"        then mpd.now.elapsed      = string.match(v, "%d+")
+                    elseif k == "song"           then mpd.now.pls_pos      = v
+                    elseif k == "playlistlength" then mpd.now.pls_len      = v
+                    elseif k == "repeat"         then mpd.now.repeat_mode  = v ~= "0"
+                    elseif k == "single"         then mpd.now.single_mode  = v ~= "0"
+                    elseif k == "random"         then mpd.now.random_mode  = v ~= "0"
+                    elseif k == "consume"        then mpd.now.consume_mode = v ~= "0"
+                    elseif k == "volume"         then mpd.now.volume       = v
                     end
                 end
             end
 
-            mpd_notification_preset.text = string.format("%s (%s) - %s\n%s", mpd_now.artist,
-                                           mpd_now.album, mpd_now.date, mpd_now.title)
-            widget = mpd.widget
-            settings()
+            mpd_notification_preset.text = string.format("%s (%s) - %s\n%s", mpd.now.artist,
+                                           mpd.now.album, mpd.now.date, mpd.now.title)
+            settings(mpd.widget, mpd.now)
 
-            if mpd_now.state == "play" then
-                if notify == "on" and mpd_now.title ~= helpers.get_map("current mpd track") then
-                    helpers.set_map("current mpd track", mpd_now.title)
+            if mpd.now.state == "play" then
+                if notify == "on" and mpd.now.title ~= helpers.get_map("current mpd track") then
+                    helpers.set_map("current mpd track", mpd.now.title)
 
                     if followtag then mpd_notification_preset.screen = focused() end
 
@@ -107,8 +106,8 @@ local function factory(args)
                         replaces_id = mpd.id
                     }
 
-                    if not string.match(mpd_now.file, "http.*://") then -- local file instead of http stream
-                        local path   = string.format("%s/%s", music_dir, string.match(mpd_now.file, ".*/"))
+                    if not string.match(mpd.now.file, "http.*://") then -- local file instead of http stream
+                        local path   = string.format("%s/%s", music_dir, string.match(mpd.now.file, ".*/"))
                         local cover  = string.format("find '%s' -maxdepth 1 -type f | egrep -i -m1 '%s'",
                                        path:gsub("'", "'\\''"), cover_pattern)
                         helpers.async({ shell, "-c", cover }, function(current_icon)
@@ -121,7 +120,7 @@ local function factory(args)
                     end
 
                 end
-            elseif mpd_now.state ~= "pause" then
+            elseif mpd.now.state ~= "pause" then
                 helpers.set_map("current mpd track", nil)
             end
         end)

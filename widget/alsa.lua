@@ -18,7 +18,7 @@ local function factory(args)
     args           = args or {}
     local alsa     = { widget = args.widget or wibox.widget.textbox() }
     local timeout  = args.timeout or 5
-    local settings = args.settings or function() end
+    local settings = args.settings or function(_, _) end
 
     alsa.cmd           = args.cmd or "amixer"
     alsa.channel       = args.channel or "Master"
@@ -38,10 +38,9 @@ local function factory(args)
             local l,s = string.match(mixer, "([%d]+)%%.*%[([%l]*)")
             l = tonumber(l)
             if alsa.last.level ~= l or alsa.last.status ~= s then
-                volume_now = { level = l, status = s }
-                widget = alsa.widget
-                settings()
-                alsa.last = volume_now
+                alsa.now = { level = l, status = s }
+                settings(alsa.widget, alsa.now)
+                alsa.last = alsa.now
             end
         end)
     end

@@ -19,26 +19,25 @@ local function factory(args)
     local timeout  = args.timeout or 30
     local tempfile = args.tempfile or "/sys/devices/virtual/thermal/thermal_zone0/temp"
     local format   = args.format or "%.1f"
-    local settings = args.settings or function() end
+    local settings = args.settings or function(_, _) end
 
     function temp.update()
         helpers.async({"find", "/sys/devices", "-type", "f", "-name", "*temp*"}, function(f)
-            temp_now = {}
+            temp.now = {}
             local temp_fl, temp_value
             for t in f:gmatch("[^\n]+") do
                 temp_fl = helpers.first_line(t)
                 if temp_fl then
                     temp_value = tonumber(temp_fl)
-                    temp_now[t] = temp_value and temp_value/1e3 or temp_fl
+                    temp.now[t] = temp_value and temp_value/1e3 or temp_fl
                 end
             end
-            if temp_now[tempfile] then
-                coretemp_now = string.format(format, temp_now[tempfile])
+            if temp.now[tempfile] then
+                temp.now.coretemp = string.format(format, temp.now[tempfile])
             else
-                coretemp_now = "N/A"
+                temp.now.coretemp = "N/A"
             end
-            widget = temp.widget
-            settings()
+            settings(temp.widget, temp.now)
         end)
     end
 

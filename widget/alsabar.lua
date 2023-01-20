@@ -33,7 +33,7 @@ local function factory(args)
     args             = args or {}
 
     local timeout    = args.timeout or 5
-    local settings   = args.settings or function() end
+    local settings   = args.settings or function(_, _) end
     local width      = args.width or 63
     local height     = args.height or 1
     local margins    = args.margins or 1
@@ -95,12 +95,12 @@ local function factory(args)
                     alsabar.bar.color = alsabar.colors.unmute
                 end
 
-                volume_now = {
+                alsabar.now = {
                     level  = alsabar._current_level,
                     status = alsabar._playback
                 }
 
-                settings()
+                settings(alsabar.bar, alsabar.now)
 
                 if type(callback) == "function" then callback() end
             end

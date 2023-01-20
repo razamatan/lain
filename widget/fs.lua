@@ -58,7 +58,7 @@ local function factory(args)
     local partition = args.partition
     local threshold = args.threshold or 99
     local showpopup = args.showpopup or "on"
-    local settings  = args.settings or function() end
+    local settings  = args.settings or function(_, _) end
 
     fs.followtag           = args.followtag or false
     fs.notification_preset = args.notification_preset
@@ -73,7 +73,7 @@ local function factory(args)
 
     local function update_synced()
         local pathlen = 10
-        fs_now = {}
+        fs.now = {}
 
         local notifypaths = {}
         for _, mount in ipairs(Gio.unix_mounts_get()) do
@@ -89,7 +89,7 @@ local function factory(args)
                 if size > 0 then
                     local units = math.floor(math.log(size)/math.log(1024))
 
-                    fs_now[path] = {
+                    fs.now[path] = {
                         units      = fs.units[units],
                         percentage = math.floor(100 * used / size), -- used percentage
                         size       = size / math.pow(1024, units),
@@ -97,7 +97,7 @@ local function factory(args)
                         free       = free / math.pow(1024, units)
                     }
 
-                    if fs_now[path].percentage > 0 then -- don't notify unused file systems
+                    if fs.now[path].percentage > 0 then -- don't notify unused file systems
                         notifypaths[#notifypaths+1] = path
 
                         if #path > pathlen then
@@ -108,15 +108,14 @@ local function factory(args)
             end
         end
 
-        widget = fs.widget
-        settings()
+        settings(fs.widget, fs.now)
 
-        if partition and fs_now[partition] and fs_now[partition].percentage >= threshold then
+        if partition and fs.now[partition] and fs.now[partition].percentage >= threshold then
             if not helpers.get_map(partition) then
                 naughty.notify {
                     preset = naughty.config.presets.critical,
                     title  = "Warning",
-                    text   = string.format("%s is above %d%% (%d%%)", partition, threshold, fs_now[partition].percentage)
+                    text   = string.format("%s is above %d%% (%d%%)", partition, threshold, fs.now[partition].percentage)
                 }
                 helpers.set_map(partition, true)
             else
@@ -128,7 +127,7 @@ local function factory(args)
         local notifytable = { [1] = string.format(fmt, "path", "used", "free", "size") }
         fmt = "\n%-" .. tostring(pathlen) .. "s %3s%%\t%6.2f\t%6.2f %s"
         for _, path in ipairs(notifypaths) do
-            notifytable[#notifytable+1] = string.format(fmt, path, fs_now[path].percentage, fs_now[path].free, fs_now[path].size, fs_now[path].units)
+            notifytable[#notifytable+1] = string.format(fmt, path, fs.now[path].percentage, fs.now[path].free, fs.now[path].size, fs.now[path].units)
         end
 
         fs.notification_preset.text = tconcat(notifytable)

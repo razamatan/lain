@@ -16,19 +16,18 @@ local open, match = io.open, string.match
 local function factory(args)
     args           = args or {}
 
-    local sysload  = { widget = args.widget or wibox.widget.textbox() }
+    local sysload  = { widget = args.widget or wibox.widget.textbox(), now = {} }
     local timeout  = args.timeout or 2
-    local settings = args.settings or function() end
+    local settings = args.settings or function(_, _) end
 
     function sysload.update()
         local f = open("/proc/loadavg")
         local ret = f:read("*all")
         f:close()
 
-        load_1, load_5, load_15 = match(ret, "([^%s]+) ([^%s]+) ([^%s]+)")
+        sysload.now[1], sysload.now[5], sysload.now[15] = match(ret, "([^%s]+) ([^%s]+) ([^%s]+)")
 
-        widget = sysload.widget
-        settings()
+        settings(sysload.widget, sysload.now)
     end
 
     helpers.newtimer("sysload", timeout, sysload.update)
